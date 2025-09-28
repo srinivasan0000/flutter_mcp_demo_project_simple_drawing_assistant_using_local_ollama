@@ -2,7 +2,19 @@
 
 A Flutter app demonstrating **AI tool calling** with local **Ollama** models. Draw shapes on canvas using natural language commands.
 
-## 📦 Packages Used
+## � App Screenshots
+
+<div align="center">
+  <img src="screenshots/Screenshot 2025-09-28 at 5.54.00 PM.png" alt="Flutter MCP Demo - Main Interface" width="700"/>
+  <p><em>Main app interface with canvas and chat functionality</em></p>
+</div>
+
+<div align="center">
+  <img src="screenshots/Screenshot 2025-09-28 at 5.55.22 PM.png" alt="Flutter MCP Demo - Shape Generation" width="700"/>
+  <p><em>AI-powered shape generation in action</em></p>
+</div>
+
+## �📦 Packages Used
 
 - **`ollama_dart: ^0.2.5`** - Ollama integration for local LLM
 - **`provider: ^6.1.1`** - State management
