@@ -1,4 +1,14 @@
-# Flutter MCP Demo 🎨
+# Fl## 📸 App Screenshots
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/srinivasan0000/flutter_mcp_demo_project_simple_drawing_assistant_using_local_ollama/main/screenshots/Screenshot%202025-09-28%20at%205.54.00%E2%80%AFPM.png" alt="Flutter MCP Demo " width="700"/>
+  <p><em>Main app interface with canvas and chat functionality</em></p>
+</div>
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/srinivasan0000/flutter_mcp_demo_project_simple_drawing_assistant_using_local_ollama/main/screenshots/Screenshot%202025-09-28%20at%205.55.22%E2%80%AFPM.png" alt="Flutter MCP Demo" width="700"/>
+  <p><em>AI-powered shape generation in action</em></p>
+</div>emo 🎨
 
 A Flutter app demonstrating **AI tool calling** with local **Ollama** models. Draw shapes on canvas using natural language commands.
 
