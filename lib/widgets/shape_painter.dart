@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/mcp_tool_calling_service.dart';
 
-/// Simple coordinate-based shape painter
 class ShapePainter extends CustomPainter {
   final List<DrawableShape> shapes;
 
@@ -9,53 +8,156 @@ class ShapePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Draw all shapes using coordinate paths
     for (final shape in shapes) {
       _drawShape(canvas, shape);
     }
   }
 
   void _drawShape(Canvas canvas, DrawableShape shape) {
-    print('🎨 Painting ${shape.type}: ${shape.description}');
-    
+    debugPrint('🎨 Painting ${shape.type}: ${shape.description}');
+
     if (shape.coordinatePaths.isNotEmpty) {
-      for (final pathPoints in shape.coordinatePaths) {
+      for (
+        int pathIndex = 0;
+        pathIndex < shape.coordinatePaths.length;
+        pathIndex++
+      ) {
+        final pathPoints = shape.coordinatePaths[pathIndex];
         if (pathPoints.isNotEmpty) {
           final path = Path();
-          path.moveTo(pathPoints[0].dx, pathPoints[0].dy);
-          
-          for (int i = 1; i < pathPoints.length; i++) {
-            path.lineTo(pathPoints[i].dx, pathPoints[i].dy);
+
+          String pathType = "line"; // default
+          if (pathIndex < shape.pathTypes.length) {
+            pathType = shape.pathTypes[pathIndex];
+          } else if (shape.pathTypes.isNotEmpty) {
+            pathType = shape.pathTypes[0];
           }
-          
-          // Close the path if it's meant to be filled
+
+          switch (pathType) {
+            case "curve":
+              _buildCurvePath(path, pathPoints, shape.smoothness);
+              break;
+            case "mixed":
+              _buildMixedPath(path, pathPoints, shape.smoothness);
+              break;
+            case "line":
+            default:
+              _buildLinePath(path, pathPoints);
+              break;
+          }
+
           if (shape.filled && pathPoints.length >= 3) {
             path.close();
           }
-          
-          // Draw filled shape first if filled
+
           if (shape.filled) {
             final fillPaint = Paint()
               ..color = shape.color
               ..style = PaintingStyle.fill;
             canvas.drawPath(path, fillPaint);
           }
-          
-          // Draw outline
+
           final outlinePaint = Paint()
             ..color = shape.outlineColor ?? shape.color
             ..strokeWidth = shape.strokeWidth
-            ..style = PaintingStyle.stroke;
+            ..style = PaintingStyle.stroke
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round;
           canvas.drawPath(path, outlinePaint);
-          
-          print('✅ Coordinate path drawn: ${shape.type} with ${pathPoints.length} points');
+
+          debugPrint(
+            '✅ $pathType path drawn: ${shape.type} with ${pathPoints.length} points',
+          );
         }
       }
-      
-      // Draw shape label
+
       _drawShapeLabel(canvas, shape);
     } else {
-      print('🚨 ${shape.type} has no coordinate paths');
+      debugPrint('🚨 ${shape.type} has no coordinate paths');
+    }
+  }
+
+  void _buildLinePath(Path path, List<Offset> points) {
+    if (points.isEmpty) return;
+
+    path.moveTo(points[0].dx, points[0].dy);
+    for (int i = 1; i < points.length; i++) {
+      path.lineTo(points[i].dx, points[i].dy);
+    }
+  }
+
+  void _buildCurvePath(Path path, List<Offset> points, double smoothness) {
+    if (points.isEmpty) return;
+
+    if (points.length < 3) {
+      _buildLinePath(path, points);
+      return;
+    }
+
+    path.moveTo(points[0].dx, points[0].dy);
+
+    for (int i = 1; i < points.length - 1; i++) {
+      final current = points[i];
+      final next = points[i + 1];
+
+      final controlPoint1 = Offset(
+        current.dx + (next.dx - points[i - 1].dx) * smoothness * 0.5,
+        current.dy + (next.dy - points[i - 1].dy) * smoothness * 0.5,
+      );
+
+      final controlPoint2 = Offset(
+        next.dx -
+            (points[(i + 2).clamp(0, points.length - 1)].dx - current.dx) *
+                smoothness *
+                0.5,
+        next.dy -
+            (points[(i + 2).clamp(0, points.length - 1)].dy - current.dy) *
+                smoothness *
+                0.5,
+      );
+
+      path.cubicTo(
+        controlPoint1.dx,
+        controlPoint1.dy,
+        controlPoint2.dx,
+        controlPoint2.dy,
+        next.dx,
+        next.dy,
+      );
+    }
+
+    if (points.length >= 2) {
+      final lastPoint = points.last;
+      path.lineTo(lastPoint.dx, lastPoint.dy);
+    }
+  }
+
+  void _buildMixedPath(Path path, List<Offset> points, double smoothness) {
+    if (points.isEmpty) return;
+
+    path.moveTo(points[0].dx, points[0].dy);
+
+    for (int i = 1; i < points.length; i++) {
+      if (i % 2 == 0 && i < points.length - 1) {
+        final current = points[i];
+        final next = points[i + 1];
+        final prev = points[i - 1];
+
+        final controlPoint = Offset(
+          current.dx + (next.dx - prev.dx) * smoothness * 0.3,
+          current.dy + (next.dy - prev.dy) * smoothness * 0.3,
+        );
+
+        path.quadraticBezierTo(
+          controlPoint.dx,
+          controlPoint.dy,
+          next.dx,
+          next.dy,
+        );
+        i++;
+      } else {
+        path.lineTo(points[i].dx, points[i].dy);
+      }
     }
   }
 
@@ -76,17 +178,14 @@ class ShapePainter extends CustomPainter {
 
       textPainter.layout();
 
-      // Calculate center from coordinate paths
       final allPoints = shape.coordinatePaths.expand((path) => path).toList();
       if (allPoints.isNotEmpty) {
-        final centerX = allPoints.map((p) => p.dx).reduce((a, b) => a + b) / allPoints.length;
+        final centerX =
+            allPoints.map((p) => p.dx).reduce((a, b) => a + b) /
+            allPoints.length;
         final minY = allPoints.map((p) => p.dy).reduce((a, b) => a < b ? a : b);
-        
-        // Position label above the shape
-        final labelOffset = Offset(
-          centerX - textPainter.width / 2,
-          minY - 25,
-        );
+
+        final labelOffset = Offset(centerX - textPainter.width / 2, minY - 25);
 
         textPainter.paint(canvas, labelOffset);
       }
@@ -99,16 +198,15 @@ class ShapePainter extends CustomPainter {
   }
 }
 
-/// Simple drawing canvas widget
 class DrawingCanvas extends StatelessWidget {
   final List<DrawableShape> shapes;
   final Function() onClearCanvas;
 
   const DrawingCanvas({
-    Key? key,
+    super.key,
     required this.shapes,
     required this.onClearCanvas,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -122,13 +220,11 @@ class DrawingCanvas extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Canvas
           CustomPaint(
             size: Size.infinite,
             painter: ShapePainter(shapes: shapes),
           ),
-          
-          // Clear button
+
           Positioned(
             top: 8,
             right: 8,
@@ -142,8 +238,7 @@ class DrawingCanvas extends StatelessWidget {
               ),
             ),
           ),
-          
-          // Shape list
+
           if (shapes.isNotEmpty)
             Positioned(
               bottom: 8,
@@ -158,12 +253,29 @@ class DrawingCanvas extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Shapes: ${shapes.length}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ...shapes.take(3).map((shape) => Text(
-                      '• ${shape.description}',
-                      style: TextStyle(fontSize: 12, color: shape.color),
-                    )),
-                    if (shapes.length > 3) Text('... and ${shapes.length - 3} more', style: const TextStyle(fontSize: 12)),
+                    Text(
+                      'Shapes: ${shapes.length}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    ...shapes.take(3).map((shape) {
+                      final pathType = shape.pathTypes.isNotEmpty
+                          ? shape.pathTypes[0]
+                          : 'line';
+                      final curveIcon = pathType == 'curve'
+                          ? '🌊'
+                          : pathType == 'mixed'
+                          ? '🔀'
+                          : '📏';
+                      return Text(
+                        '$curveIcon ${shape.description}',
+                        style: TextStyle(fontSize: 12, color: shape.color),
+                      );
+                    }),
+                    if (shapes.length > 3)
+                      Text(
+                        '... and ${shapes.length - 3} more',
+                        style: const TextStyle(fontSize: 12),
+                      ),
                   ],
                 ),
               ),
