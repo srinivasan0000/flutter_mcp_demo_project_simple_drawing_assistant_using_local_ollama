@@ -379,6 +379,101 @@ Heart (CRITICAL EXAMPLE):
       }
 
       if (pathsData is List) {
+        try {
+          if (pathsData.isNotEmpty) {
+            bool allNums = true;
+            for (final e in pathsData) {
+              if (e is! num) {
+                allNums = false;
+                break;
+              }
+            }
+            if (allNums) {
+              List<List<num>> coords = [];
+              for (int k = 0; k + 1 < pathsData.length; k += 2) {
+                final a = pathsData[k];
+                final b = pathsData[k + 1];
+                if (a is num && b is num) coords.add([a, b]);
+              }
+              pathsData = [coords];
+              debugPrint(
+                '🔧 Normalized flat numeric array into single path with ${coords.length} points (robust)',
+              );
+            } else if (pathsData.every((p) => p is List)) {
+              bool everyElemIsPair = true;
+              for (final p in pathsData) {
+                if (p is! List) {
+                  everyElemIsPair = false;
+                  break;
+                }
+                if (p.length < 2 || p[0] is! num || p[1] is! num) {
+                  everyElemIsPair = false;
+                  break;
+                }
+              }
+              if (everyElemIsPair) {
+                // pathsData is a single path represented as list of pairs -> wrap
+                pathsData = [pathsData];
+                debugPrint(
+                  '🔧 Detected single path as list of coordinate pairs; wrapped into outer list',
+                );
+              } else {
+                // Possibly already a list of paths (each path is list of pairs), keep as-is
+                debugPrint(
+                  '🔧 pathsData appears to be a list of paths or mixed structure; leaving as-is',
+                );
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('🔧 Robust normalization error: $e');
+        }
+        try {
+          if (pathsData.isNotEmpty) {
+            final first = pathsData[0];
+            if (first is List && first.isNotEmpty && first[0] is num) {
+              // but ensure we are not already in the form [[ [x,y], ... ]]
+              if (!(first[0] is List)) {
+                pathsData = [pathsData];
+                debugPrint(
+                  '🔧 Final wrap: converted list-of-pairs into list-of-paths',
+                );
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('🔧 Final wrap check error: $e');
+        }
+
+        try {
+          if (pathsData is List && pathsData.isNotEmpty) {
+            final maybePair = pathsData[0];
+            bool looksLikeListOfPairs = true;
+            if (maybePair is List &&
+                maybePair.isNotEmpty &&
+                maybePair[0] is num) {
+              for (final e in pathsData) {
+                if (e is! List) {
+                  looksLikeListOfPairs = false;
+                  break;
+                }
+                if (e.length < 2 || e[0] is! num || e[1] is! num) {
+                  looksLikeListOfPairs = false;
+                  break;
+                }
+              }
+              if (looksLikeListOfPairs) {
+                pathsData = [pathsData];
+                debugPrint(
+                  '🔧 Final normalization: wrapped list-of-pairs into list-of-paths',
+                );
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('🔧 Final normalization error: $e');
+        }
+
         debugPrint('🔍 Processing paths data with ${pathsData.length} path(s)');
         for (int i = 0; i < pathsData.length; i++) {
           final pathData = pathsData[i];
@@ -400,14 +495,12 @@ Heart (CRITICAL EXAMPLE):
 
                   debugPrint('✅ Parsed coordinate: ($x, $y)');
 
-                  // Validate coordinates
                   if (x < 0 || y < 0 || x > 600 || y > 500) {
                     debugPrint(
                       '⚠️ Coordinate ($x, $y) outside canvas bounds, clamping...',
                     );
                   }
 
-                  // Ensure coordinates are within safe drawing area
                   x = x.clamp(50.0, 550.0);
                   y = y.clamp(50.0, 450.0);
 
@@ -520,29 +613,26 @@ Heart (CRITICAL EXAMPLE):
       case 'grey':
         return Colors.grey;
       default:
-        return Colors.blue; // Default fallback
+        return Colors.blue;
     }
   }
 
-  /// Dispose resources
   void dispose() {
     _client.endSession();
   }
 }
 
 class DrawableShape {
-  final String
-  type; // Dynamic type - can be any description: "triangle", "house", "star", etc.
-  final List<List<Offset>>
-  coordinatePaths; // Coordinate arrays for drawing any shape
+  final String type;
+  final List<List<Offset>> coordinatePaths;
   final Color color;
   final double strokeWidth;
   final String description;
-  final bool filled; // Whether to fill the shape
-  final Color? outlineColor; // Separate outline color
-  final List<String> pathTypes; // Path types: "line", "curve", "mixed"
-  final List<List<double>> curves; // Bezier curve control points
-  final double smoothness; // Curve smoothness factor
+  final bool filled;
+  final Color? outlineColor;
+  final List<String> pathTypes;
+  final List<List<double>> curves;
+  final double smoothness;
 
   DrawableShape({
     required this.type,
